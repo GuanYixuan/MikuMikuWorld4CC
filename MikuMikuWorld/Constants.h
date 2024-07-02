@@ -17,10 +17,10 @@ namespace MikuMikuWorld
 	constexpr float MAX_BPM							= 10000;
 
 	constexpr const char* NOTES_TEX				= "notes1";
-	constexpr const char* CC_NOTES_TEX				= "notes2";
+	constexpr const char* CC_NOTES_TEX			= "notes2";
 	constexpr const char* HOLD_PATH_TEX			= "longNoteLine";
 	constexpr const char* TOUCH_LINE_TEX		= "touchLine_eff";
-	constexpr const char* GUIDE_COLORS_TEX				= "guideColors";
+	constexpr const char* GUIDE_COLORS_TEX		= "guideColors";
 	constexpr const char* APP_CONFIG_FILENAME	= "app_config.json";
 	constexpr const char* IMGUI_CONFIG_FILENAME = "imgui_config.ini";
 
@@ -28,4 +28,5 @@ namespace MikuMikuWorld
 	constexpr const char* USC_EXTENSION			= ".usc";
 	constexpr const char* MMWS_EXTENSION		= ".mmws";
 	constexpr const char* CC_MMWS_EXTENSION		= ".ccmmws";
+	constexpr const char* JSON_EXTENSION		= ".json";
 }

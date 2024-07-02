@@ -12,6 +12,7 @@
 #include "SusParser.h"
 #include "UI.h"
 #include "Utilities.h"
+#include "Sonolus_json.h"
 #include <Windows.h>
 #include <filesystem>
 #include <fstream>
@@ -379,6 +380,9 @@ namespace MikuMikuWorld
 				newScore = deserializeScore(filename);
 				workingFilename = filename;
 			}
+			else if (extension == JSON_EXTENSION) {
+				newScore = Sonolus_json::load_file(filename);
+			}
 
 			context.clearSelection();
 			context.history.clear();
@@ -437,7 +441,7 @@ namespace MikuMikuWorld
 		IO::FileDialog fileDialog{};
 		fileDialog.parentWindowHandle = Application::windowState.windowHandle;
 		fileDialog.title = "Open Score File";
-		fileDialog.filters = { { "Score Files", "*.ccmmws;*.mmws;*.usc;*.sus" } };
+		fileDialog.filters = { { "Score Files", "*.ccmmws;*.mmws;*.usc;*.sus;*.json" } };
 
 		if (fileDialog.openFile() == IO::FileDialogResult::OK)
 			loadScore(fileDialog.outputFilename);

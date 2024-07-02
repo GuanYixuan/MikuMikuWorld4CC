@@ -147,6 +147,9 @@
     <ClCompile Include="IO.cpp">
       <Filter>IO</Filter>
     </ClCompile>
+    <ClCompile Include="Sonolus_json.cpp">
+      <Filter>Score\Sonolus_json</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
@@ -329,6 +332,9 @@
     <ClInclude Include="Audio\Waveform.h">
       <Filter>Audio</Filter>
     </ClInclude>
+    <ClInclude Include="Sonolus_json.h">
+      <Filter>Score\Sonolus_json</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Imgui">
@@ -384,6 +390,9 @@
     </Filter>
     <Filter Include="ScoreEditor">
       <UniqueIdentifier>{9b7e5692-fc35-4f4c-9b06-172b56eed59d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Score\Sonolus_json">
+      <UniqueIdentifier>{140ed78e-d2f4-493d-83ea-d79edfae2737}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

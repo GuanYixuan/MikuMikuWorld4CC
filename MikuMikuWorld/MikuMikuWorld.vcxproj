@@ -119,17 +119,18 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_DEBUG;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-	  <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends;../Depends/openssl/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends;../Depends/openssl/include</AdditionalIncludeDirectories>
       <ObjectFileName>$(IntDir)</ObjectFileName>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;Version.lib;libcrypto.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-	  <AdditionalLibraryDirectories>../Depends/GLFW/lib;../Depends/openssl/lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>../Depends/GLFW/lib;../Depends/openssl/lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-		<Command>
+      <Command>
 			xcopy "$(ProjectDir)res\" "$(OutDir)res\" /E /Y
 			xcopy "$(ProjectDir)\..\Depends\openssl\bin\*.dll" "$(OutDir)" /E /Y
 		</Command>
@@ -144,7 +145,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-	  <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends;../Depends/openssl/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends;../Depends/openssl/include</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
@@ -160,7 +161,7 @@
       <AdditionalManifestDependencies>type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'</AdditionalManifestDependencies>
     </Link>
     <PostBuildEvent>
-		<Command>
+      <Command>
 			xcopy "$(ProjectDir)res\" "$(OutDir)res\" /E /Y
 			xcopy "$(ProjectDir)\..\Depends\openssl\bin\*.dll" "$(OutDir)" /E /Y
 		</Command>
@@ -212,6 +213,7 @@
     <ClCompile Include="ScoreEditorTimeline.cpp" />
     <ClCompile Include="ScoreEditorWindows.cpp" />
     <ClCompile Include="ScoreStats.cpp" />
+    <ClCompile Include="Sonolus_json.cpp" />
     <ClCompile Include="Stopwatch.cpp" />
     <ClCompile Include="SusExporter.cpp" />
     <ClCompile Include="SusParser.cpp" />
@@ -273,6 +275,7 @@
     <ClInclude Include="ScoreEditorTimeline.h" />
     <ClInclude Include="ScoreEditorWindows.h" />
     <ClInclude Include="ScoreStats.h" />
+    <ClInclude Include="Sonolus_json.h" />
     <ClInclude Include="Stopwatch.h" />
     <ClInclude Include="SUS.h" />
     <ClInclude Include="SusExporter.h" />

@@ -21,18 +21,15 @@ namespace MikuMikuWorld
 	{
 	}
 
+	Note::Note(NoteType _type, int _ID, int _tick, int _lane, int _width, bool _critical, bool _friction, FlickType _flick, int _parentID) noexcept
+		: type{ _type }, parentID(_parentID), ID(_ID), tick(_tick), lane(_lane), width(_width),
+		  critical(_critical), friction(_friction), flick(_flick) {}
+
 	Note::Note()
 	    : type{ NoteType::Tap }, parentID{ -1 }, tick{ 0 }, lane{ 0 }, width{ 3 },
 	      critical{ false }, friction{ false }
 	{
 	}
-
-	bool Note::isFlick() const
-	{
-		return flick != FlickType::None && type != NoteType::Hold && type != NoteType::HoldMid;
-	}
-
-	bool Note::hasEase() const { return type == NoteType::Hold || type == NoteType::HoldMid; }
 
 	bool Note::canFlick() const { return type == NoteType::Tap || type == NoteType::HoldEnd; }
 

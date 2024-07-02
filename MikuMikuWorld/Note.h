@@ -59,51 +59,107 @@ namespace MikuMikuWorld
 		NoteType type;
 
 	  public:
+		// The note's ID whose uniqueness is assured by the global incremental variable `nextID`
 		int ID;
+		// Start note's ID of the slide that this note belongs to, -1 if this note is slide start or isn't part of a slide
 		int parentID;
+		// The note's time, where scale is defined by `TICKS_PER_BEAT` in `Constants.h`
 		int tick;
+		// The position of the note's leftmost point, which should lie in [0, 12) in most cases
 		float lane;
+		// The note's width, where the full width is 12
 		float width;
+		// Whether the note is a critical note
 		bool critical{ false };
+		// Whether the note is a trace note
 		bool friction{ false };
+		// The flick note's direction, not valid where a flick is inappropriate
 		FlickType flick{ FlickType::None };
-
+		// The layer that this note belongs to
 		int layer{ 0 };
 
 		explicit Note(NoteType _type);
 		explicit Note(NoteType _type, int tick, float lane, float width);
+		Note(NoteType _type, int _ID, int _tick, int _lane, int _width, bool _critical = false, bool _friction = false, FlickType _flick = FlickType::None, int _parentID = -1) noexcept;
 		Note();
 
-		constexpr NoteType getType() const { return type; }
+		constexpr NoteType getType() const noexcept { return type; }
+		constexpr bool operator==(NoteType _type) const noexcept { return type == _type; }
+		constexpr bool operator!=(NoteType _type) const noexcept { return type != _type; }
 
-		bool isFlick() const;
-		bool hasEase() const;
+		// Returns whether this note is a (single) flick note
+		constexpr bool isFlick() const noexcept { return flick != FlickType::None && type != NoteType::Hold && type != NoteType::HoldMid; }
+		/**
+		 * @brief Returns whether this note controls a segment of slide curve
+		 * @note This method doesn't check whether this note links to a `HoldStepType::Skip` though
+		 */
+		constexpr bool hasEase() const noexcept { return type == NoteType::Hold || type == NoteType::HoldMid; }
+
 		bool canFlick() const;
 	};
 
-	struct HoldStep
+	// Provide additional curve control information for notes in slides
+	class HoldStep
 	{
+	  public:
+		// ID of the note that this piece of information belongs to
 		int ID;
 		HoldStepType type;
 		EaseType ease;
+
+		constexpr bool operator==(HoldStepType _type) const noexcept { return type == _type; }
+		constexpr bool operator!=(HoldStepType _type) const noexcept { return type != _type; }
 	};
 
 	class HoldNote
 	{
 	  public:
+		// Additional curve control information for slide start
 		HoldStep start;
+		// Additional curve control information for each slide tick
 		std::vector<HoldStep> steps;
+		// ID of the end note
 		int end;
 
+		// Whether the slide start is *hidden*, but if any of `startType` and `endType` is HoldNoteType::Guide, then the slide is considered a guide slide
 		HoldNoteType startType{};
+		// Whether the slide end is *hidden*, but if any of `startType` and `endType` is HoldNoteType::Guide, then the slide is considered a guide slide
 		HoldNoteType endType{};
 
 		FadeType fadeType{ FadeType::Out };
 		GuideColor guideColor{ GuideColor::Green };
 
+		// Returns whether this is a guide slide
 		constexpr bool isGuide() const
 		{
 			return startType == HoldNoteType::Guide || endType == HoldNoteType::Guide;
+		}
+
+		/**
+		 * @brief Retrieve HoldStep according to given `index` within `[-1, steps.size()-1]`
+		 * @throw `std::out_of_range` if `index` is invalid
+		 * @warning Reference returned by this method can be invalidated by vector reallocation
+		 */
+		HoldStep& operator[](int index) {
+			if (index < -1 || index >= (int)steps.size()) throw std::out_of_range("Index out of range in HoldNote[]");
+			return index == -1 ? start : steps[index];
+		}
+		/**
+		 * @brief Retrieve HoldStep according to given `index` within `[-1, steps.size()-1]`
+		 * @throw `std::out_of_range` if `index` is invalid
+		 * @warning Reference returned by this method can be invalidated by vector reallocation
+		 */
+		const HoldStep& operator[](int index) const {
+			if (index < -1 || index >= (int)steps.size()) throw std::out_of_range("Index out of range in HoldNote[]");
+			return index == -1 ? start : steps[index];
+		}
+		/**
+		 * @brief Retrieve note ID according to given `index` within `[-1, steps.size()]`
+		 * @throw `std::out_of_range` if `index` is invalid
+		 */
+		int id_at(int index) const {
+			if (index < -1 || index > (int)steps.size()) throw std::out_of_range("Index out of range in HoldNote::id_at");
+			return (index == steps.size()) ? end : (index == -1 ? start.ID : steps[index].ID);
 		}
 	};
 
@@ -114,7 +170,12 @@ namespace MikuMikuWorld
 	void cycleFlick(Note& note);
 	void cycleStepEase(HoldStep& note);
 	void cycleStepType(HoldStep& note);
+	// Sort HoldSteps contained in current HoldNote according to `score` context
 	void sortHoldSteps(const Score& score, HoldNote& note);
+	/**
+	 * @brief Find the index of a HoldStep according to given `stepID`
+	 * @return `int` - The index of first HoldStep with `stepID` in `steps`, returns -1 if given `stepID` cannot be found
+	 */
 	int findHoldStep(const HoldNote& note, int stepID);
 
 	int getFlickArrowSpriteIndex(const Note& note);

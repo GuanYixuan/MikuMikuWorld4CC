@@ -80,7 +80,7 @@ namespace MikuMikuWorld
 
 		explicit Note(NoteType _type);
 		explicit Note(NoteType _type, int tick, float lane, float width);
-		Note(NoteType _type, int _ID, int _tick, float _lane, float _width, bool _critical = false, bool _friction = false, FlickType _flick = FlickType::None, int _parentID = -1) noexcept;
+		Note(NoteType _type, int _ID, int _tick, float _lane, float _width, int _layer = 0, bool _critical = false, bool _friction = false, FlickType _flick = FlickType::None, int _parentID = -1) noexcept;
 		Note();
 
 		constexpr NoteType getType() const noexcept { return type; }

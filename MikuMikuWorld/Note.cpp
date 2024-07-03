@@ -21,8 +21,8 @@ namespace MikuMikuWorld
 	{
 	}
 
-	Note::Note(NoteType _type, int _ID, int _tick, float _lane, float _width, bool _critical, bool _friction, FlickType _flick, int _parentID) noexcept
-		: type{ _type }, parentID(_parentID), ID(_ID), tick(_tick), lane(_lane), width(_width),
+	Note::Note(NoteType _type, int _ID, int _tick, float _lane, float _width, int _layer, bool _critical, bool _friction, FlickType _flick, int _parentID) noexcept
+		: type{ _type }, parentID(_parentID), ID(_ID), tick(_tick), lane(_lane), width(_width), layer(_layer),
 		  critical(_critical), friction(_friction), flick(_flick) {}
 
 	Note::Note()

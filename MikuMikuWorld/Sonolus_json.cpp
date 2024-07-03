@@ -131,7 +131,7 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 	std::unordered_map<std::string, int> ref_to_id; // Mapping from "ref" in .json file to ID in editor
 	assert(js["entities"].is_array());
 	for (const json& entity : js["entities"]) {
-		 std::cout << nextID << ": " << entity << std::endl;
+		//  std::cout << nextID << ": " << entity << std::endl;
 
 		// Extract entity["archetype"]
 		assert(entity["archetype"].is_string());
@@ -142,7 +142,12 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		// Skipping various types
 		if (type == Entity_type::Initialization || type == Entity_type::InputManager || type == Entity_type::Stage) continue; // No need to handle
 		if (type == Entity_type::IgnoredSlideTick || type == Entity_type::SimLine) continue; // No need to handle
-		if (type == Entity_type::TimeScaleGroup) continue; // Not supported yet
+
+		// Create new layer for each TimeScaleGroup
+		if (type == Entity_type::TimeScaleGroup) {
+			ret.layers.emplace_back(Layer{entity["name"]});
+			continue;
+		}
 
 		// Extract entity["data"] as an unordered_map
 		std::unordered_map<std::string, json> data;
@@ -153,14 +158,16 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		std::optional<int> tick = data.count("#BEAT") ? std::optional<int>(std::round(double(data["#BEAT"]) * TICKS_PER_BEAT)) : std::nullopt;
 		std::optional<float> width = data.count("size") ? std::optional<float>(double(data["size"]) * 2) : std::nullopt;
 		std::optional<float> lane = (data.count("lane") && data.count("size")) ? std::optional<float>(double(data["lane"]) - double(data["size"]) + 6) : std::nullopt;
-		std::optional<int> scale_group = data.count("timeScaleGroup") ? std::optional<int>(std::stoi(std::string(data["timeScaleGroup"]).substr(4))) : std::nullopt;
+		std::optional<int> scale_group = data.count("timeScaleGroup") ? std::optional<int>(std::stoi(std::string(data["timeScaleGroup"]).substr(4)) + 1) : std::nullopt;
 
 		// Convert timings
 		bool converted = true;
 		if (type == Entity_type::TimeScaleChange) {
+			std::string tsc_name = std::string(entity["name"]);
 			ret.hiSpeedChanges.emplace(
 				nextHiSpeedID,
-				HiSpeedChange{nextHiSpeedID, tick.value(), data.count("timeScale") ? data["timeScale"] : data["#TIMESCALE"]}
+				HiSpeedChange{nextHiSpeedID, tick.value(), data.count("timeScale") ? data["timeScale"] : data["#TIMESCALE"],
+							  std::stoi(tsc_name.substr(4, tsc_name.find_last_of(':') - 4)) + 1}
 				);
 			nextHiSpeedID++;
 		} else if (type == Entity_type::BPMChange) ret.tempoChanges.emplace_back(tick.value(), data["#BPM"]);
@@ -170,7 +177,8 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		// Convert single notes
 		if (category == Note_category::single) {
 			NoteType note_type = type == Entity_type::DamageNote ? NoteType::Damage : NoteType::Tap;
-			ret.notes.emplace(nextID, Note(note_type, nextID, tick.value(), lane.value(), width.value(), type.critical(), type.friction(), get_flick_dir(data)));
+			ret.notes.emplace(nextID, Note(note_type, nextID, tick.value(), lane.value(), width.value(),
+										   scale_group.value(), type.critical(), type.friction(), get_flick_dir(data)));
 			nextID++;
 			continue;
 		}
@@ -183,12 +191,14 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 
 			// Construct the start note
 			Note start_note{NoteType::Hold, nextID,
-							std::lround(double(data["startBeat"]) * TICKS_PER_BEAT), float(data["startLane"]) - float(data["startSize"]) + 6, float(data["startSize"]) * 2};
+							std::lround(double(data["startBeat"]) * TICKS_PER_BEAT), float(data["startLane"]) - float(data["startSize"]) + 6, float(data["startSize"]) * 2,
+							std::stoi(std::string(data["startTimeScaleGroup"]).substr(4)) + 1};
 			ret.notes.emplace(nextID, start_note);
 			current_slide_id = nextID++;
 			// Construct the end note
 			Note end_note{NoteType::HoldEnd, nextID,
-						  std::lround(double(data["endBeat"]) * TICKS_PER_BEAT), float(data["endLane"]) - float(data["endSize"]) + 6, float(data["endSize"]) * 2};
+						  std::lround(double(data["endBeat"]) * TICKS_PER_BEAT), float(data["endLane"]) - float(data["endSize"]) + 6, float(data["endSize"]) * 2,
+						  std::stoi(std::string(data["endTimeScaleGroup"]).substr(4)) + 1};
 			end_note.parentID = current_slide_id;
 			ret.notes.emplace(nextID++, end_note);
 			// Create a new HoldNote instance
@@ -204,7 +214,8 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		// Assumption: All notes within a slide are presented continuously in the file
 		if (category == Note_category::slide_start) {
 			// Construct the start note
-			ret.notes.emplace(nextID, Note(NoteType::Hold, nextID, tick.value(), lane.value(), width.value(), type.critical(), type.friction()));
+			ret.notes.emplace(nextID, Note(NoteType::Hold, nextID, tick.value(), lane.value(), width.value(),
+										   scale_group.value(), type.critical(), type.friction()));
 			// Create a new HoldNote instance, note that its end note, ease types and slide type (e.g. guide) are not determined
 			HoldNote new_hold;
 			new_hold.end = -1;
@@ -222,14 +233,16 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 			HoldStepType step_type = attached ? HoldStepType::Skip : (type == Entity_type::HiddenSlideTick ? HoldStepType::Hidden : HoldStepType::Normal);
 			ret.holdNotes[current_slide_id].steps.push_back(HoldStep{nextID, step_type, attached ? EaseType::Linear : EaseType::EaseTypeCount});
 			// The lane and width of "AttachedSlideTick" are determined in the second loop
-			ret.notes.emplace(nextID, Note(NoteType::HoldMid, nextID, tick.value(), attached ? 0 : lane.value(), attached ? 2 : width.value(), type.critical(), false, FlickType::None, current_slide_id));
+			ret.notes.emplace(nextID, Note(NoteType::HoldMid, nextID, tick.value(), attached ? 0 : lane.value(), attached ? 2 : width.value(),
+										   scale_group.value(), type.critical(), false, FlickType::None, current_slide_id));
 			// Remember "ref" to add curve control information for them later on
 			if (!attached) ref_to_id.emplace(std::string(entity["name"]), nextID);
 			nextID++;
 		}
 		// Determine slide end
 		else if (category == Note_category::slide_end) {
-			ret.notes.emplace(nextID, Note(NoteType::HoldEnd, nextID, tick.value(), lane.value(), width.value(), type.critical(), type.friction(), get_flick_dir(data), current_slide_id));
+			ret.notes.emplace(nextID, Note(NoteType::HoldEnd, nextID, tick.value(), lane.value(), width.value(),
+										   scale_group.value(), type.critical(), type.friction(), get_flick_dir(data), current_slide_id));
 			ret.holdNotes[current_slide_id].end = nextID++;
 			sortHoldSteps(ret, ret.holdNotes[current_slide_id]);
 		}

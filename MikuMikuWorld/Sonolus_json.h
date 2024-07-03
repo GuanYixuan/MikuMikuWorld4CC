@@ -22,7 +22,7 @@ namespace Sonolus_json {
 	enum class Note_category {
 		init,
 		timing,
-		single,
+		single,			// including damages
 		slide_start,
 		slide_tick,
 		slide_end,
@@ -58,6 +58,7 @@ namespace Sonolus_json {
 			CriticalFlick,
 			NormalTraceFlick,
 			CriticalTraceFlick,
+			DamageNote,
 
 			// Slide start
 			NormalSlideStart = 0x20,
@@ -91,7 +92,6 @@ namespace Sonolus_json {
 
 			// Others
 			SimLine = 0x70, // The link between two synchronous notes
-			DamageNote
 		} __value;
 		/**
 		 * @brief Construct from string
@@ -112,7 +112,6 @@ namespace Sonolus_json {
 		/**
 		 * @brief Returns whether this *note* is a critical note
 		 * @throw `std::invalid_argument` - Current entity isn't a note (e.g. BPMChange or something else)
-		 * @note "YellowDummySlide" is considered the critical version of DummySlide
 		 */
 		bool critical() const;
 		/**

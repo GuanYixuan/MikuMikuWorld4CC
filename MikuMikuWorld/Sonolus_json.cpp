@@ -106,6 +106,16 @@ inline FlickType get_flick_dir(const std::unordered_map<std::string, json>& data
 	else if (dir == -1) return FlickType::Left;
 	return FlickType::Default;
 }
+// Helper function that converts ease types
+inline EaseType get_ease_type(int json_val) {
+	switch (json_val) {
+		case 0: return EaseType::Linear;
+		case 1: return EaseType::EaseIn;
+		case -1: return EaseType::EaseOut;
+		default:
+			throw std::invalid_argument("Unexpected ease type");
+	}
+}
 
 Score Sonolus_json::load_file(const std::string& file_name) {
 	Score ret;
@@ -118,7 +128,6 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 	ret.metadata.musicOffset = -1000 * double(js["bgmOffset"]);
 
 	int current_slide_id = -1;
-	bool current_guide_slide = false; // Whether we are processing a guide slide now, set on encountering DummySlides
 	std::unordered_map<std::string, int> ref_to_id; // Mapping from "ref" in .json file to ID in editor
 	assert(js["entities"].is_array());
 	for (const json& entity : js["entities"]) {
@@ -133,7 +142,7 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		// Skipping various types
 		if (type == Entity_type::Initialization || type == Entity_type::InputManager || type == Entity_type::Stage) continue; // No need to handle
 		if (type == Entity_type::IgnoredSlideTick || type == Entity_type::SimLine) continue; // No need to handle
-		if (type == Entity_type::TimeScaleGroup || type == Entity_type::DamageNote) continue; // Not supported yet
+		if (type == Entity_type::TimeScaleGroup) continue; // Not supported yet
 
 		// Extract entity["data"] as an unordered_map
 		std::unordered_map<std::string, json> data;
@@ -142,8 +151,9 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 
 		// Extract some of the widely-used attributes
 		std::optional<int> tick = data.count("#BEAT") ? std::optional<int>(std::round(double(data["#BEAT"]) * TICKS_PER_BEAT)) : std::nullopt;
-		std::optional<int> width = data.count("size") ? std::optional<int>(std::round(double(data["size"]) * 2)) : std::nullopt;
-		std::optional<int> lane = (data.count("lane") && data.count("size")) ? std::optional<int>(std::round(double(data["lane"]) - double(data["size"]) + 6)) : std::nullopt;
+		std::optional<float> width = data.count("size") ? std::optional<float>(double(data["size"]) * 2) : std::nullopt;
+		std::optional<float> lane = (data.count("lane") && data.count("size")) ? std::optional<float>(double(data["lane"]) - double(data["size"]) + 6) : std::nullopt;
+		std::optional<int> scale_group = data.count("timeScaleGroup") ? std::optional<int>(std::stoi(std::string(data["timeScaleGroup"]).substr(4))) : std::nullopt;
 
 		// Convert timings
 		bool converted = true;
@@ -159,8 +169,33 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 
 		// Convert single notes
 		if (category == Note_category::single) {
-			ret.notes.emplace(nextID, Note(NoteType::Tap, nextID, tick.value(), lane.value(), width.value(), type.critical(), type.friction(), get_flick_dir(data)));
+			NoteType note_type = type == Entity_type::DamageNote ? NoteType::Damage : NoteType::Tap;
+			ret.notes.emplace(nextID, Note(note_type, nextID, tick.value(), lane.value(), width.value(), type.critical(), type.friction(), get_flick_dir(data)));
 			nextID++;
+			continue;
+		}
+
+		// Convert guides
+		// The difference between "start" and "head", "tail" and "end" is not clear now
+		if (category == Note_category::guide_slide) {
+			assert(std::string(data["startTimeScaleGroup"]) == std::string(data["headTimeScaleGroup"]));
+			assert(std::string(data["endTimeScaleGroup"]) == std::string(data["tailTimeScaleGroup"]));
+
+			// Construct the start note
+			Note start_note{NoteType::Hold, nextID,
+							std::lround(double(data["startBeat"]) * TICKS_PER_BEAT), float(data["startLane"]) - float(data["startSize"]) + 6, float(data["startSize"]) * 2};
+			ret.notes.emplace(nextID, start_note);
+			current_slide_id = nextID++;
+			// Construct the end note
+			Note end_note{NoteType::HoldEnd, nextID,
+						  std::lround(double(data["endBeat"]) * TICKS_PER_BEAT), float(data["endLane"]) - float(data["endSize"]) + 6, float(data["endSize"]) * 2};
+			end_note.parentID = current_slide_id;
+			ret.notes.emplace(nextID++, end_note);
+			// Create a new HoldNote instance
+			ret.holdNotes.emplace(current_slide_id, HoldNote{
+								  HoldStep{current_slide_id, HoldStepType::Normal, get_ease_type(data["ease"])}, end_note.ID,
+								  static_cast<FadeType>(int(data["fade"])), static_cast<GuideColor>(int(data["color"]))
+								  });
 			continue;
 		}
 
@@ -168,7 +203,6 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		// Start/Create a slide
 		// Assumption: All notes within a slide are presented continuously in the file
 		if (category == Note_category::slide_start) {
-			current_guide_slide = false;
 			// Construct the start note
 			ret.notes.emplace(nextID, Note(NoteType::Hold, nextID, tick.value(), lane.value(), width.value(), type.critical(), type.friction()));
 			// Create a new HoldNote instance, note that its end note, ease types and slide type (e.g. guide) are not determined
@@ -195,25 +229,14 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		}
 		// Determine slide end
 		else if (category == Note_category::slide_end) {
-			assert(!current_guide_slide && "Encountered slide end before slide start!");
 			ret.notes.emplace(nextID, Note(NoteType::HoldEnd, nextID, tick.value(), lane.value(), width.value(), type.critical(), type.friction(), get_flick_dir(data), current_slide_id));
 			ret.holdNotes[current_slide_id].end = nextID++;
 			sortHoldSteps(ret, ret.holdNotes[current_slide_id]);
 		}
 		// Process connectors to provide ease information
-		else if (category == Note_category::connector || category == Note_category::guide_slide) {
-			// Change hold type to guide on finding special connectors
-			if (!current_guide_slide && category == Note_category::guide_slide) {
-				current_guide_slide = true;
-				ret.holdNotes[current_slide_id].startType = HoldNoteType::Guide;
-				ret.holdNotes[current_slide_id].endType = HoldNoteType::Guide;
-			} else if (current_guide_slide && category == Note_category::connector) {
-				printf("Warning: Probably mixing different types of connectors in the same slide (%d)!", current_slide_id);
-			}
+		else if (category == Note_category::connector) {
 			// Extract ease type
-			EaseType ease_type = EaseType::Linear;
-			if (data["ease"] == 1) ease_type = EaseType::EaseIn;
-			else if (data["ease"] == -1) ease_type = EaseType::EaseOut;
+			EaseType ease_type = get_ease_type(data["ease"]);
 			// Find corresponding HoldStep to assign EaseType
 			int target_id = ref_to_id[data["head"]];
 			int target_index_in_slide = findHoldStep(ret.holdNotes[current_slide_id], target_id);

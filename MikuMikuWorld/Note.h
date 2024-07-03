@@ -80,7 +80,7 @@ namespace MikuMikuWorld
 
 		explicit Note(NoteType _type);
 		explicit Note(NoteType _type, int tick, float lane, float width);
-		Note(NoteType _type, int _ID, int _tick, int _lane, int _width, bool _critical = false, bool _friction = false, FlickType _flick = FlickType::None, int _parentID = -1) noexcept;
+		Note(NoteType _type, int _ID, int _tick, float _lane, float _width, bool _critical = false, bool _friction = false, FlickType _flick = FlickType::None, int _parentID = -1) noexcept;
 		Note();
 
 		constexpr NoteType getType() const noexcept { return type; }
@@ -107,6 +107,9 @@ namespace MikuMikuWorld
 		HoldStepType type;
 		EaseType ease;
 
+		HoldStep() = default;
+		HoldStep(int _ID, HoldStepType _type, EaseType _ease) : ID(_ID), type(_type), ease(_ease) {}
+
 		constexpr bool operator==(HoldStepType _type) const noexcept { return type == _type; }
 		constexpr bool operator!=(HoldStepType _type) const noexcept { return type != _type; }
 	};
@@ -128,6 +131,14 @@ namespace MikuMikuWorld
 
 		FadeType fadeType{ FadeType::Out };
 		GuideColor guideColor{ GuideColor::Green };
+
+		HoldNote() = default;
+		// Construct a guide slide
+		HoldNote(const HoldStep& _start, int _end, FadeType _fadeType, GuideColor _guideColor)
+			: start(_start), steps(), end(_end), startType(HoldNoteType::Guide), endType(HoldNoteType::Guide), fadeType(_fadeType), guideColor(_guideColor) {}
+		// Full constructor
+		HoldNote(const HoldStep& _start, const std::vector<HoldStep>& _steps, int _end, HoldNoteType _startType, HoldNoteType _endType, FadeType _fadeType, GuideColor _guideColor)
+			: start(_start), steps(_steps), end(_end), startType(_startType), endType(_endType), fadeType(_fadeType), guideColor(_guideColor) {}
 
 		// Returns whether this is a guide slide
 		constexpr bool isGuide() const

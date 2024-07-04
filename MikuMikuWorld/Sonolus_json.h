@@ -22,7 +22,7 @@ namespace Sonolus_json {
 	enum class Note_category {
 		init,
 		timing,
-		single,			// including damages
+		single,			// including damage notes
 		slide_start,
 		slide_tick,
 		slide_end,
@@ -34,7 +34,7 @@ namespace Sonolus_json {
 	/**
 	 * @brief An enum class wrapped with convenient methods to repersent entity types in the .json file
 	 * @warning The values of these enumerate constants are exploited and therefore cannot be modified arbitrarily
-	 * @note Enumerate constants in this class are closely related to .json file format (Up to 23/10/03)
+	 * @note Enumerate constants in this class are closely related to .json file format (Up to 24/07/03)
 	 */
 	class Entity_type {
 	public:
@@ -100,7 +100,7 @@ namespace Sonolus_json {
 		explicit Entity_type(const std::string& str);
 		// Allow constructions like `Entity_type foo(Entity_type::BPMChange)`
 		constexpr Entity_type(__Inner_type val) noexcept : __value(val) {}
-		// Allow switch and comparisons
+		// Allow switches and comparisons
 		constexpr operator __Inner_type() const noexcept { return __value; }
 		// Prevent `if(entity_type)` usage
 		explicit operator bool() const = delete;

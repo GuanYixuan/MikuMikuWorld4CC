@@ -107,7 +107,7 @@ namespace MikuMikuWorld
 		HoldStepType type;
 		EaseType ease;
 
-		HoldStep() = default;
+		HoldStep() : ID(0), type(HoldStepType::Normal), ease(EaseType::Linear) {}
 		HoldStep(int _ID, HoldStepType _type, EaseType _ease) : ID(_ID), type(_type), ease(_ease) {}
 
 		constexpr bool operator==(HoldStepType _type) const noexcept { return type == _type; }

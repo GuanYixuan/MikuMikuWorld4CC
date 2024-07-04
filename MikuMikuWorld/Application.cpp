@@ -151,7 +151,7 @@ namespace MikuMikuWorld
 			std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
 
 			if (extension == SUS_EXTENSION || extension == USC_EXTENSION ||
-			    extension == MMWS_EXTENSION || extension == CC_MMWS_EXTENSION)
+			    extension == MMWS_EXTENSION || extension == CC_MMWS_EXTENSION || extension == JSON_EXTENSION)
 				scoreFile = *it;
 			else if (Audio::isSupportedFileFormat(extension))
 				musicFile = *it;

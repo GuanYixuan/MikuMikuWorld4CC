@@ -37,13 +37,16 @@ const std::unordered_map<std::string, Entity_type::__Inner_type> Entity_type::ma
 	{"NormalTraceFlickNote", Entity_type::NormalTraceFlick},
 	{"CriticalTraceNote", Entity_type::CriticalTrace},
 	{"CriticalTraceFlickNote", Entity_type::CriticalTraceFlick},
+	{"DamageNote", Entity_type::DamageNote},
 
 	// Slide start
 	{"NormalSlideStartNote", Entity_type::NormalSlideStart},
 	{"CriticalSlideStartNote", Entity_type::CriticalSlideStart},
 	{"HiddenSlideStartNote", Entity_type::HiddenSlideStart},
 	{"NormalTraceSlideStartNote", Entity_type::NormalTraceSlideStart},
+	{"NormalSlideTraceNote", Entity_type::NormalTraceSlideStart}, // Presents in official charts
 	{"CriticalTraceSlideStartNote", Entity_type::CriticalTraceSlideStart},
+	{"CriticalSlideTraceNote", Entity_type::CriticalTraceSlideStart}, // Presents in official charts
 
 	// Slide tick
 	{"NormalSlideTickNote", Entity_type::NormalSlideTick},
@@ -59,18 +62,21 @@ const std::unordered_map<std::string, Entity_type::__Inner_type> Entity_type::ma
 	{"CriticalSlideEndNote", Entity_type::CriticalSlideEnd},
 	{"CriticalSlideEndFlickNote", Entity_type::CriticalSlideEndFlick},
 	{"NormalTraceSlideEndNote", Entity_type::NormalTraceSlideEnd},
+	{"NormalSlideEndTraceNote", Entity_type::NormalTraceSlideEnd}, // Presents in official charts
 	{"CriticalTraceSlideEndNote", Entity_type::CriticalTraceSlideEnd},
+	{"CriticalSlideEndTraceNote", Entity_type::CriticalTraceSlideEnd}, // Presents in official charts
 
 	// Slide connector (slide bar)
 	{"NormalSlideConnector", Entity_type::NormalSlideConnector},
+	{"NormalActiveSlideConnector", Entity_type::NormalSlideConnector}, // Presents in official charts
 	{"CriticalSlideConnector", Entity_type::CriticalSlideConnector},
+	{"CriticalActiveSlideConnector", Entity_type::CriticalSlideConnector}, // Presents in official charts
 
 	// Guides
 	{"Guide", Entity_type::Guide},
 
 	// Others
-	{"SimLine", Entity_type::SimLine},
-	{"DamageNote", Entity_type::DamageNote}
+	{"SimLine", Entity_type::SimLine}
 };
 Entity_type::Entity_type(const std::string& str) {
 	if (!map_from_str.count(str)) {
@@ -127,11 +133,12 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 	assert(js["bgmOffset"].is_number());
 	ret.metadata.musicOffset = -1000 * double(js["bgmOffset"]);
 
+	bool official_charts = false; // Whether we're converting an official chart (which has no time scale groups)
 	int current_slide_id = -1;
 	std::unordered_map<std::string, int> ref_to_id; // Mapping from "ref" in .json file to ID in editor
 	assert(js["entities"].is_array());
 	for (const json& entity : js["entities"]) {
-		//  std::cout << nextID << ": " << entity << std::endl;
+		  std::cout << nextID << ": " << entity << std::endl;
 
 		// Extract entity["archetype"]
 		assert(entity["archetype"].is_string());
@@ -139,9 +146,11 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		Entity_type type(archetype);
 		Note_category category = type.get_category();
 
-		// Skipping various types
-		if (type == Entity_type::Initialization || type == Entity_type::InputManager || type == Entity_type::Stage) continue; // No need to handle
-		if (type == Entity_type::IgnoredSlideTick || type == Entity_type::SimLine) continue; // No need to handle
+		// Swap types for HiddenSlideTick and IgnoredSlideTick when converting official charts
+		if (official_charts) {
+			if (type == Entity_type::HiddenSlideTick) type = Entity_type::IgnoredSlideTick;
+			else if (type == Entity_type::IgnoredSlideTick) type = Entity_type::HiddenSlideTick;
+		}
 
 		// Create new layer for each TimeScaleGroup
 		if (type == Entity_type::TimeScaleGroup) {
@@ -149,25 +158,38 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 			continue;
 		}
 
+		// Skipping various types
+		if(type == Entity_type::Initialization || type == Entity_type::InputManager || type == Entity_type::Stage) continue; // No need to handle
+		if(type == Entity_type::IgnoredSlideTick || type == Entity_type::SimLine) continue; // No need to handle
+
 		// Extract entity["data"] as an unordered_map
 		std::unordered_map<std::string, json> data;
 		assert(entity["data"].is_array());
 		for (const json& data_item : entity["data"]) data[data_item["name"]] = data_item.count("value") ? data_item["value"] : data_item["ref"];
 
+		// Identify official charts (not sufficient now)
+		official_charts |= (archetype == "#TIMESCALE_CHANGE");
+		official_charts |= (category == Note_category::single) && (data.count("timeScaleGroup") == 0);
+
 		// Extract some of the widely-used attributes
 		std::optional<int> tick = data.count("#BEAT") ? std::optional<int>(std::round(double(data["#BEAT"]) * TICKS_PER_BEAT)) : std::nullopt;
 		std::optional<float> width = data.count("size") ? std::optional<float>(double(data["size"]) * 2) : std::nullopt;
 		std::optional<float> lane = (data.count("lane") && data.count("size")) ? std::optional<float>(double(data["lane"]) - double(data["size"]) + 6) : std::nullopt;
-		std::optional<int> scale_group = data.count("timeScaleGroup") ? std::optional<int>(std::stoi(std::string(data["timeScaleGroup"]).substr(4)) + 1) : std::nullopt;
+		std::optional<int> scale_group = official_charts ? 0 :
+										(data.count("timeScaleGroup") ? std::optional<int>(std::stoi(std::string(data["timeScaleGroup"]).substr(4)) + 1) : std::nullopt);
 
 		// Convert timings
 		bool converted = true;
 		if (type == Entity_type::TimeScaleChange) {
-			std::string tsc_name = std::string(entity["name"]);
+			int scg = 0;
+			if (!official_charts) {
+				std::string tsc_name = std::string(entity["name"]);
+				scg = std::stoi(tsc_name.substr(4, tsc_name.find_last_of(':') - 4)) + 1;
+			}
+
 			ret.hiSpeedChanges.emplace(
 				nextHiSpeedID,
-				HiSpeedChange{nextHiSpeedID, tick.value(), data.count("timeScale") ? data["timeScale"] : data["#TIMESCALE"],
-							  std::stoi(tsc_name.substr(4, tsc_name.find_last_of(':') - 4)) + 1}
+				HiSpeedChange{nextHiSpeedID, tick.value(), data.count("timeScale") ? data["timeScale"] : data["#TIMESCALE"], scg}
 				);
 			nextHiSpeedID++;
 		} else if (type == Entity_type::BPMChange) ret.tempoChanges.emplace_back(tick.value(), data["#BPM"]);
@@ -211,7 +233,8 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 
 		// Convert slides!
 		// Start/Create a slide
-		// Assumption: All notes within a slide are presented continuously in the file
+		// Assumption: Start and end notes within a slide are presented continuously in the file (new-fashioned offical charts)
+		// Assumption: All notes within a slide are presented continuously in the file (old-fashioned offical charts)
 		if (category == Note_category::slide_start) {
 			// Construct the start note
 			ret.notes.emplace(nextID, Note(NoteType::Hold, nextID, tick.value(), lane.value(), width.value(),
@@ -229,12 +252,14 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		// Add slide ticks
 		else if (category == Note_category::slide_tick) {
 			// Create slide tick and append it, use EaseType::EaseTypeCount as undetermined (but needed) ease type
+			int parent_id = data.count("start") ? ref_to_id[data["start"]] : current_slide_id;
 			bool attached = (type == Entity_type::NormalAttachedSlideTick) || (type == Entity_type::CriticalAttachedSlideTick);
 			HoldStepType step_type = attached ? HoldStepType::Skip : (type == Entity_type::HiddenSlideTick ? HoldStepType::Hidden : HoldStepType::Normal);
-			ret.holdNotes[current_slide_id].steps.push_back(HoldStep{nextID, step_type, attached ? EaseType::Linear : EaseType::EaseTypeCount});
+
+			ret.holdNotes[parent_id].steps.push_back(HoldStep{nextID, step_type, attached ? EaseType::Linear : EaseType::EaseTypeCount});
 			// The lane and width of "AttachedSlideTick" are determined in the second loop
 			ret.notes.emplace(nextID, Note(NoteType::HoldMid, nextID, tick.value(), attached ? 0 : lane.value(), attached ? 2 : width.value(),
-										   scale_group.value(), type.critical(), false, FlickType::None, current_slide_id));
+										   scale_group.value(), type.critical(), false, FlickType::None, parent_id));
 			// Remember "ref" to add curve control information for them later on
 			if (!attached) ref_to_id.emplace(std::string(entity["name"]), nextID);
 			nextID++;
@@ -252,8 +277,9 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 			EaseType ease_type = get_ease_type(data["ease"]);
 			// Find corresponding HoldStep to assign EaseType
 			int target_id = ref_to_id[data["head"]];
-			int target_index_in_slide = findHoldStep(ret.holdNotes[current_slide_id], target_id);
-			ret.holdNotes[current_slide_id][target_index_in_slide].ease = ease_type;
+			HoldNote& target_hold = ret.holdNotes[data.count("start") ? ref_to_id[data["start"]] : current_slide_id];
+
+			target_hold[findHoldStep(target_hold, target_id)].ease = ease_type;
 			// Update critical status also
 			ret.notes[target_id].critical = type.critical();
 		} else {
@@ -296,13 +322,14 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 				continue;
 			}
 			// Calculate x-interval for the slide at the attached moment
+			assert(start_note && end_note && "Slide step without start or end note");
 			float t = (float)(curr_note->tick - start_note->tick) / (end_note->tick - start_note->tick);
 			float pct = connector_type.ease(t);
 			float left = lerp(start_note->lane, end_note->lane, pct);
 			float right = lerp(start_note->lane+start_note->width, end_note->lane+end_note->width, pct);
 			// Move the attached tick to right place
-			curr_note->lane = round(left);
-			curr_note->width = std::max(lround(right - left), 1l);
+			curr_note->lane = left;
+			curr_note->width = right - left;
 		}
 	}
 

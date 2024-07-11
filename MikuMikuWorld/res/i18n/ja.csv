@@ -2,6 +2,7 @@
 # key, value
 
 language_name, 日本語
+translator, 名無し｡（@sevenc_nanashi@voskey.icalo.net）
 # menu bar
 file, ファイル
 new, 新規
@@ -157,6 +158,10 @@ division, %d分音符
 division_affix, %d分音符
 custom, カスタム：
 custom_division, カスタム分割
+snap_mode, スナップ
+snap_mode_relative, 相対スナップ
+snap_mode_absolute, 絶対スナップ
+snap_mode_individual_absolute, 個別絶対スナップ
 zoom, ズーム
 show_step_outlines, 中継点に枠線を表示
 draw_waveform, 波形を表示
@@ -197,7 +202,9 @@ note_properties_hi_speed, ハイスピード
 note_properties_hold_note, スライド
 note_properties_guide, ガイド
 note_properties_not_selected, ノーツ、またはハイスピードを選択してください。
-note_properties_many_selected, 複数のノーツまたはハイスピードが選択されています。
+note_properties_many_hold_notes, 複数のスライドが選択されています。
+translated_by, 翻訳：%s
+zoom_tooltip,Ctrl+クリックで値を編集
 
 # preset manager
 presets, プリセット

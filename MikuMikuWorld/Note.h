@@ -87,6 +87,8 @@ namespace MikuMikuWorld
 		constexpr bool operator==(NoteType _type) const noexcept { return type == _type; }
 		constexpr bool operator!=(NoteType _type) const noexcept { return type != _type; }
 
+		// Returns whether this note is part of a hold note
+		constexpr bool isHold() const { return type == NoteType::Hold || type == NoteType::HoldMid || type == NoteType::HoldEnd; }
 		// Returns whether this note is a (single) flick note
 		constexpr bool isFlick() const noexcept { return flick != FlickType::None && type != NoteType::Hold && type != NoteType::HoldMid; }
 		/**
@@ -96,6 +98,7 @@ namespace MikuMikuWorld
 		constexpr bool hasEase() const noexcept { return type == NoteType::Hold || type == NoteType::HoldMid; }
 
 		bool canFlick() const;
+		bool canTrace() const;
 	};
 
 	// Provide additional curve control information for notes in slides

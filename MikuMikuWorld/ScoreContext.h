@@ -87,6 +87,23 @@ namespace MikuMikuWorld
 		int selectedLayer = 0;
 		bool showAllLayers = false;
 
+		bool hasSelection() const
+		{
+			return selectedNotes.size() > 0 || selectedHiSpeedChanges.size() > 0;
+		}
+
+		bool hasHoldInSelection() const
+		{
+			for (int id : selectedNotes)
+			{
+				const Note& n = score.notes.at(id);
+				if (n.getType() == NoteType::Hold || n.getType() == NoteType::HoldMid ||
+				    n.getType() == NoteType::HoldEnd)
+					return true;
+			}
+			return false;
+		}
+
 		std::unordered_set<int> getHoldsFromSelection()
 		{
 			std::unordered_set<int> holds;

@@ -116,7 +116,7 @@
     <ClCompile>
       <WarningLevel>Level1</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_DEBUG;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_DEBUG;DEBUG;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends;../Depends/openssl/include</AdditionalIncludeDirectories>
@@ -232,7 +232,6 @@
     <ClInclude Include="BinaryWriter.h" />
     <ClInclude Include="Colors.h" />
     <ClInclude Include="Constants.h" />
-    <ClInclude Include="DefaultLanguage.h" />
     <ClInclude Include="File.h" />
     <ClInclude Include="HistoryManager.h" />
     <ClInclude Include="IconsFontAwesome5.h" />

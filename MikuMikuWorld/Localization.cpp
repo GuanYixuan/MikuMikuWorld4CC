@@ -1,5 +1,4 @@
 #include "Localization.h"
-#include "DefaultLanguage.h"
 #include "IO.h"
 #include "File.h"
 #include <filesystem>
@@ -16,7 +15,7 @@ namespace MikuMikuWorld
 		if (!IO::File::exists(filename))
 			return;
 
-        languages[code] = std::make_unique<Language>(code, filename);
+		languages[code] = std::make_unique<Language>(code, filename);
 	}
 
 	bool Localization::setLanguage(const std::string& code)
@@ -29,11 +28,6 @@ namespace MikuMikuWorld
 		return true;
 	}
 
-	void Localization::loadDefault()
-	{
-		languages["en"] = std::make_unique<Language>("en", en);
-	}
-
 	const char* getString(const std::string& key)
 	{
 		if (!Localization::currentLanguage)
@@ -42,10 +36,11 @@ namespace MikuMikuWorld
 		if (!Localization::currentLanguage->containsString(key))
 			return Localization::languages["en"]->getString(key);
 
-        return Localization::currentLanguage->getString(key);
+		return Localization::currentLanguage->getString(key);
 	}
 
-	void Localization::loadLanguages(const std::string& path) {
+	void Localization::loadLanguages(const std::string& path)
+	{
 		std::wstring wPath = IO::mbToWideStr(path);
 		if (!std::filesystem::exists(wPath))
 			return;

@@ -176,7 +176,7 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		std::optional<float> width = data.count("size") ? std::optional<float>(double(data["size"]) * 2) : std::nullopt;
 		std::optional<float> lane = (data.count("lane") && data.count("size")) ? std::optional<float>(double(data["lane"]) - double(data["size"]) + 6) : std::nullopt;
 		std::optional<int> scale_group = official_charts ? 0 :
-										(data.count("timeScaleGroup") ? std::optional<int>(std::stoi(std::string(data["timeScaleGroup"]).substr(4)) + 1) : std::nullopt);
+										(data.count("timeScaleGroup") ? std::optional<int>(std::stoi(std::string(data["timeScaleGroup"]).substr(4))) : std::nullopt);
 
 		// Convert timings
 		bool converted = true;
@@ -184,7 +184,7 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 			int scg = 0;
 			if (!official_charts) {
 				std::string tsc_name = std::string(entity["name"]);
-				scg = std::stoi(tsc_name.substr(4, tsc_name.find_last_of(':') - 4)) + 1;
+				scg = std::stoi(tsc_name.substr(4, tsc_name.find_last_of(':') - 4));
 			}
 
 			ret.hiSpeedChanges.emplace(
@@ -214,13 +214,13 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 			// Construct the start note
 			Note start_note{NoteType::Hold, nextID,
 							std::lround(double(data["startBeat"]) * TICKS_PER_BEAT), float(data["startLane"]) - float(data["startSize"]) + 6, float(data["startSize"]) * 2,
-							std::stoi(std::string(data["startTimeScaleGroup"]).substr(4)) + 1};
+							std::stoi(std::string(data["startTimeScaleGroup"]).substr(4))};
 			ret.notes.emplace(nextID, start_note);
 			current_slide_id = nextID++;
 			// Construct the end note
 			Note end_note{NoteType::HoldEnd, nextID,
 						  std::lround(double(data["endBeat"]) * TICKS_PER_BEAT), float(data["endLane"]) - float(data["endSize"]) + 6, float(data["endSize"]) * 2,
-						  std::stoi(std::string(data["endTimeScaleGroup"]).substr(4)) + 1};
+						  std::stoi(std::string(data["endTimeScaleGroup"]).substr(4))};
 			end_note.parentID = current_slide_id;
 			ret.notes.emplace(nextID++, end_note);
 			// Create a new HoldNote instance
@@ -239,7 +239,7 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 			// Construct the start note
 			ret.notes.emplace(nextID, Note(NoteType::Hold, nextID, tick.value(), lane.value(), width.value(),
 										   scale_group.value(), type.critical(), type.friction()));
-			// Create a new HoldNote instance, note that its end note, ease types and slide type (e.g. guide) are not determined
+			// Create a new HoldNote instance whose end note, ease types and slide type (e.g. guide) are not determined
 			HoldNote new_hold;
 			new_hold.end = -1;
 			new_hold.start.ID = nextID;
@@ -327,7 +327,7 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 			float pct = connector_type.ease(t);
 			float left = lerp(start_note->lane, end_note->lane, pct);
 			float right = lerp(start_note->lane+start_note->width, end_note->lane+end_note->width, pct);
-			// Move the attached tick to right place
+			// Move the attached tick to the right place
 			curr_note->lane = left;
 			curr_note->width = right - left;
 		}

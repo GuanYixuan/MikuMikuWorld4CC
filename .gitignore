@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 MikuMikuWorld/imgui_config.ini
 enc_temp_folder
+
+# VS Code settings
+.vscode/

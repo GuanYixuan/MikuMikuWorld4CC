@@ -133,12 +133,29 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 	assert(js["bgmOffset"].is_number());
 	ret.metadata.musicOffset = -1000 * double(js["bgmOffset"]);
 
+	std::unordered_map<std::string, std::string> head_ref; // Mapping from a note to its head note (for slides)
+	for (const json& entity : js["entities"]) {
+		std::string archetype(entity["archetype"]);
+		Note_category category = Entity_type(archetype).get_category();
+
+		if (category == Note_category::connector) {
+			// Extract entity["data"] as an unordered_map
+			std::unordered_map<std::string, json> data;
+			assert(entity["data"].is_array());
+			for (const json& data_item : entity["data"]) data[data_item["name"]] = data_item.count("value") ? data_item["value"] : data_item["ref"];
+
+			head_ref.emplace(data["head"], data["start"]);
+			head_ref.emplace(data["tail"], data["start"]);
+			if (entity.count("name")) head_ref.emplace(entity["name"], data["start"]);
+		}
+	}
+
 	bool official_charts = false; // Whether we're converting an official chart (which has no time scale groups)
 	int current_slide_id = -1;
 	std::unordered_map<std::string, int> ref_to_id; // Mapping from "ref" in .json file to ID in editor
 	assert(js["entities"].is_array());
 	for (const json& entity : js["entities"]) {
-		  std::cout << nextID << ": " << entity << std::endl;
+		// std::cout << nextID << ": " << entity << std::endl;
 
 		// Extract entity["archetype"]
 		assert(entity["archetype"].is_string());
@@ -251,10 +268,15 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		}
 		// Add slide ticks
 		else if (category == Note_category::slide_tick) {
-			// Create slide tick and append it, use EaseType::EaseTypeCount as undetermined (but needed) ease type
-			int parent_id = data.count("start") ? ref_to_id[data["start"]] : current_slide_id;
 			bool attached = (type == Entity_type::NormalAttachedSlideTick) || (type == Entity_type::CriticalAttachedSlideTick);
-			HoldStepType step_type = attached ? HoldStepType::Skip : (type == Entity_type::HiddenSlideTick ? HoldStepType::Hidden : HoldStepType::Normal);
+			// Create slide tick and append it, use EaseType::EaseTypeCount as undetermined (but needed) ease type
+			int parent_id = -1;
+			if (data.count("start")) parent_id = ref_to_id.at(data["start"]);
+			else if (entity.count("name")) parent_id = ref_to_id.at(head_ref.at(entity["name"]));
+			else if (attached) parent_id = ref_to_id.at(head_ref.at(std::string(data.at("attach"))));
+			else assert(false); // Should not happen
+
+			HoldStepType step_type = attached ? HoldStepType::Skip : ((type == Entity_type::HiddenSlideTick) ? HoldStepType::Hidden : HoldStepType::Normal);
 
 			ret.holdNotes[parent_id].steps.push_back(HoldStep{nextID, step_type, attached ? EaseType::Linear : EaseType::EaseTypeCount});
 			// The lane and width of "AttachedSlideTick" are determined in the second loop
@@ -266,18 +288,19 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		}
 		// Determine slide end
 		else if (category == Note_category::slide_end) {
+			int slide_id = head_ref.count(entity["name"]) ? ref_to_id.at(head_ref[entity["name"]]) : current_slide_id;
 			ret.notes.emplace(nextID, Note(NoteType::HoldEnd, nextID, tick.value(), lane.value(), width.value(),
-										   scale_group.value(), type.critical(), type.friction(), get_flick_dir(data), current_slide_id));
-			ret.holdNotes[current_slide_id].end = nextID++;
-			sortHoldSteps(ret, ret.holdNotes[current_slide_id]);
+										   scale_group.value(), type.critical(), type.friction(), get_flick_dir(data), slide_id));
+			ret.holdNotes[slide_id].end = nextID++;
+			sortHoldSteps(ret, ret.holdNotes[slide_id]);
 		}
 		// Process connectors to provide ease information
 		else if (category == Note_category::connector) {
 			// Extract ease type
 			EaseType ease_type = get_ease_type(data["ease"]);
 			// Find corresponding HoldStep to assign EaseType
-			int target_id = ref_to_id[data["head"]];
-			HoldNote& target_hold = ret.holdNotes[data.count("start") ? ref_to_id[data["start"]] : current_slide_id];
+			int target_id = ref_to_id.at(data.at("head"));
+			HoldNote& target_hold = ret.holdNotes[data.count("start") ? ref_to_id.at(data["start"]) : current_slide_id];
 
 			target_hold[findHoldStep(target_hold, target_id)].ease = ease_type;
 			// Update critical status also
@@ -292,7 +315,9 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 		for (int i = 0; i < hold.steps.size(); i++) {
 			if (hold[i].ease == EaseType::EaseTypeCount) {
 				if (i == hold.steps.size()-1 && hold.end == -1) { // Indicates "HiddenSlideTick" as slide end
+					printf("\tAssuming HiddenSlideTick %d as slide end\n", hold[i].ID);
 					hold.end = hold[i].ID;
+					ret.notes[hold.end].type = NoteType::HoldEnd;
 					if (hold.endType == HoldNoteType::Normal) hold.endType = HoldNoteType::Hidden;
 					hold.steps.pop_back();
 				} else assert(false); // Otherwise invaild

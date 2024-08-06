@@ -55,10 +55,9 @@ namespace MikuMikuWorld
 
 	class Note
 	{
-	  private:
+	  public:
 		NoteType type;
 
-	  public:
 		// The note's ID whose uniqueness is assured by the global incremental variable `nextID`
 		int ID;
 		// Start note's ID of the slide that this note belongs to, -1 if this note is slide start or isn't part of a slide

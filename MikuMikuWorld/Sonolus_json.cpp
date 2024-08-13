@@ -118,6 +118,7 @@ inline EaseType get_ease_type(int json_val) {
 		case 0: return EaseType::Linear;
 		case 1: return EaseType::EaseIn;
 		case -1: return EaseType::EaseOut;
+		case 2: return EaseType::EaseInOut;
 		default:
 			throw std::invalid_argument("Unexpected ease type");
 	}
@@ -230,14 +231,14 @@ Score Sonolus_json::load_file(const std::string& file_name) {
 
 			// Construct the start note
 			Note start_note{NoteType::Hold, nextID,
-							std::lround(double(data["startBeat"]) * TICKS_PER_BEAT), float(data["startLane"]) - float(data["startSize"]) + 6, float(data["startSize"]) * 2,
-							std::stoi(std::string(data["startTimeScaleGroup"]).substr(4))};
+							std::lround(double(data["headBeat"]) * TICKS_PER_BEAT), float(data["headLane"]) - float(data["headSize"]) + 6, float(data["headSize"]) * 2,
+							std::stoi(std::string(data["headTimeScaleGroup"]).substr(4))};
 			ret.notes.emplace(nextID, start_note);
 			current_slide_id = nextID++;
 			// Construct the end note
 			Note end_note{NoteType::HoldEnd, nextID,
-						  std::lround(double(data["endBeat"]) * TICKS_PER_BEAT), float(data["endLane"]) - float(data["endSize"]) + 6, float(data["endSize"]) * 2,
-						  std::stoi(std::string(data["endTimeScaleGroup"]).substr(4))};
+						  std::lround(double(data["tailBeat"]) * TICKS_PER_BEAT), float(data["tailLane"]) - float(data["tailSize"]) + 6, float(data["tailSize"]) * 2,
+						  std::stoi(std::string(data["tailTimeScaleGroup"]).substr(4))};
 			end_note.parentID = current_slide_id;
 			ret.notes.emplace(nextID++, end_note);
 			// Create a new HoldNote instance

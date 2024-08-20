@@ -32,6 +32,12 @@ namespace MikuMikuWorld
 		language = jsonIO::tryGetValue<std::string>(config, "language", "auto");
 		debugEnabled = jsonIO::tryGetValue<bool>(config, "debug", false);
 
+		if (jsonIO::keyExists(config, "file"))
+		{
+			minifyUsc = jsonIO::tryGetValue<bool>(config["file"], "minify_usc", true);
+			showSusExport = jsonIO::tryGetValue<bool>(config["file"], "show_sus_export", false);
+		}
+
 		if (jsonIO::keyExists(config, "window"))
 		{
 			const json& window = config["window"];
@@ -56,6 +62,7 @@ namespace MikuMikuWorld
 		if (jsonIO::keyExists(config, "timeline"))
 		{
 			timelineWidth = jsonIO::tryGetValue<int>(config["timeline"], "lane_width", 26);
+			showSusExport = jsonIO::tryGetValue<bool>(config["file"], "show_sus_export", false);
 			notesHeight = jsonIO::tryGetValue<int>(config["timeline"], "notes_height", 26);
 			matchNotesSizeToTimeline =
 			    jsonIO::tryGetValue<bool>(config["timeline"], "match_notes_size_to_timeline", true);
@@ -148,6 +155,8 @@ namespace MikuMikuWorld
 		config["version"] = CONFIG_VERSION;
 		config["language"] = language;
 		config["debug"] = debugEnabled;
+		config["file"]["minify_usc"] = minifyUsc;
+		config["file"]["show_sus_export"] = showSusExport;
 		config["window"]["position"] = { { "x", windowPos.x }, { "y", windowPos.y } };
 
 		config["window"]["size"] = { { "x", windowSize.x }, { "y", windowSize.y } };
@@ -225,6 +234,8 @@ namespace MikuMikuWorld
 		userColor = Color(0.2f, 0.2f, 0.2f, 1.0f);
 		language = "auto";
 
+		minifyUsc = true;
+		showSusExport = false;
 		timelineWidth = 26;
 		notesHeight = 26;
 		matchNotesSizeToTimeline = true;

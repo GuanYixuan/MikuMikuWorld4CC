@@ -96,6 +96,8 @@ namespace MikuMikuWorld
 		float zoom;
 
 		// settings
+		bool minifyUsc;
+		bool showSusExport;
 		int timelineWidth;
 		int notesHeight;
 		bool matchNotesSizeToTimeline;
